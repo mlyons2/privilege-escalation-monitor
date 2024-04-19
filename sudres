@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Script to restore the sudoers file from its backup
+
+cp "/var/backups/sudoers.back" "/etc/sudoers"
+chmod 0440 "/etc/sudoers"
+chown root:root "/etc/sudoers"
+

@@ -1,0 +1,36 @@
+#!/bin/bash
+
+
+source /var/backups/sudbackup.status
+# Files that are being compared
+current="/etc/sudoers"
+backup="/var/backups/sudoers.back"
+
+
+# If these command's want to be run outside of cron job
+# These will update the backup file or restore the sudoers file
+if [ "$1" = "-a" ]; then
+	echo "SUDOERS_CHANGE=enabled" > /var/backups/sudbackup.status
+	/bin/bash /usr/sbin/sudback
+	echo "Backup process enabled. Sudoers.back updated."
+	echo "$(date) Backup process enabled Sudoers.back updated." >> /var/sudoers_change/sudo_diff.log
+	exit
+elif [ "$1" = "-d" ]; then
+	echo "SUDOERS_CHANGE=enabled" > /var/backups/sudbackup.status
+	/bin/bash /usr/sbin/sudres
+	echo "Backup process enabled. Sudoers restored."
+	echo "$(date) Backup process enabled; Sudoers restored from sudoers.back." >> /var/sudoers_change
+	exit
+fi	
+	
+# No changes found 
+if diff -q "$current" "$backup" >/dev/null; then
+	echo "$(date) No change found to sudoers file" >> /var/sudoers_change/sudo_diff.log
+	echo " " >> /var/sudoers_change/sudo_diff.log	
+	
+# Change had been found between the original and the backup sudoers file
+else 
+	echo "$(date) CHANGES DETECTED" >> /var/sudoers_change/sudo_diff.log
+	echo "SUDOERS_CHANGE=disabled" > /var/backups/sudbackup.status
+	diff "$current" "$backup" >> /var/sudoers_change/sudo_diff.log
+fi

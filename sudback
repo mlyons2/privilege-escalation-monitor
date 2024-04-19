@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# This file simply takes the sudoers and restores it from the backup
+
+if [ -f /var/backups/sudoers.back ]; then
+	rm /var/backups/sudoers.back
+fi
+
+cp /etc/sudoers /var/backups/sudoers.back

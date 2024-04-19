@@ -1,0 +1,92 @@
+#!/bin/bash
+source /var/backups/sudbackup.status
+
+# Loop until user quits
+while true; do
+	# Users can either view the filtered auth.log searching for sudo/su commands
+	# or they can view the tail of the logged sudoers file changes
+	echo " "
+	echo "PRIVILEGE MONITOR"
+	echo ""
+	echo "1. Sudo Command Search"
+	echo "2. Login Attempts"
+	echo "3. Sudoers changes"
+	echo "q. Quit"
+	echo -n "option: "
+	read -r option
+	
+	# Works by requesting a username for the user and then parses the auth.log
+	# for sudo commands used by that user
+	if [[ "$option" == "1" ]]; then
+		echo " "
+		echo "Sudo Command Search"
+		echo ""
+		echo "Enter username to Search:"
+		read username
+		echo ""
+		echo "SUDO COMMAND RESULTS FOR $username"
+		
+		# grep to search for patters of username and sudo
+		# awk used to furthr filter the risults for inportant information
+		grep -E "sudo: $username" /var/log/auth.log.1 | awk '{print $1, $2, $3, $5, $6, $12, $14, $15}'
+		grep -E "sudo: $username" /var/log/auth.log | awk '{print $1, $2, $3, $5, $6, $12, $14, $15}'	
+		
+	# Works the same as previous but filters for su (switch user) commands
+	elif [[ "$option" == "2" ]]; then
+		echo "Login Attempts"
+		echo "Enter username to Search:"
+		read username
+		echo "" 
+		echo "LOGIN ATTMPT RESULTS FOR $username"
+		echo ""
+		echo "DATE/TIME STAMP 		MESSAGE"
+		echo ""
+		grep "su:" /var/log/auth.log.1 | grep "$username"
+		grep "su:" /var/log/auth.log | grep "$username"
+		
+	# Sudoers file monitor tool
+	elif [[ "$option" == "3" ]]; then 
+		tail /var/sudoers_change/sudo_diff.log	
+		# Change has been detected
+		# Choose to either: Approve the backup of sudoers, restore sudoers file from the backup, or skip
+		if [ "$SUDOERS_CHANGE" == "disabled" ]; then
+			echo ""
+			echo "SUDOERS CHANGED"
+			echo "Select an option:"
+			echo "   A: Approve changes and update backup"
+			echo "   D: Deny changes and restore sudoers from backup"
+			echo "   S: skip for now"
+			read -r option
+			echo ""
+			# Approve the backup of sudoers
+			if [[ "$option" == "A" ]]; then
+				echo "SUDOERS_CHANGE=enabled" > /var/backups/sudbackup.status
+				/bin/bash /usr/sbin/sudback
+				echo "Chnages Approved. Sudoers.back updated."
+				echo "$(date) Changes Approved. Sudoers.back updated." \
+				 >> /var/sudoers_change/sudo_diff.log
+				 echo " "
+			# Approve the restoration of sudoers	
+			elif [[ "$option" == "D" ]]; then
+				echo "SUDOERS_CHANGE=enabled" > /var/backups/sudbackup.status
+				/bin/bash /usr/sbin/sudres
+				echo "Changes Denied . Sudoers restored."
+				echo "$(date) Changes Denied. Sudoers restored." \
+				 >> /var/sudoers_change/sudo_diff.log
+				 echo " "
+			#else
+				#Skipping Do Nothing		
+			fi
+		fi	
+	# Quit the application
+	elif [[ "$option" == "q" ]]; then
+		echo "Quiting..."
+		sleep .5
+		break
+	else
+		echo "PLEASE CHOOSE A VALID OPTION"
+	fi
+done
+
+
+

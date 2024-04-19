@@ -1,1 +1,1 @@
-# privilege-escalation-monitor
+# Privilege Escalation Monitor
